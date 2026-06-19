@@ -1,0 +1,25 @@
+{
+  "name": "lead-build",
+  "displayName": "lead-build",
+  "description": "lead-build integration",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "pbb",
+      "aliases": ["Lead build file", "pbb"],
+      "extensions": [".pbb"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "pbb",
+      "scopeName": "source.lead-build",
+      "path": "./syntaxes/pbb.tmLanguage.json"
+    }]
+  }
+}
