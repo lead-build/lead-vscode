@@ -9,9 +9,6 @@
   "categories": [
     "Programming Languages"
   ],
-  "activationEvents": [
-    "onLanguage:pbb"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
