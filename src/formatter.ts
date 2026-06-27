@@ -88,7 +88,7 @@ function splitCodeOnSemicolons(code: string): string[] {
     return parts;
 }
 
-function normalizeSpaces(segment: string): string {
+function normalizeOutsideString(segment: string): string {
     let text = segment.replace(/\s+/g, ' ');
     text = text.replace(/\s*\.\s*/g, '.');
     text = text.replace(/\s*,\s*/g, ', ');
@@ -110,7 +110,39 @@ function normalizeSpaces(segment: string): string {
 
     text = text.replace(/\s+/g, ' ');
     text = text.replace(/\}\s*\|/g, '}|');
-    return text.trim();
+    return text;
+}
+
+function normalizeSpaces(segment: string): string {
+    let result = '';
+    let current = '';
+    let inString = false;
+
+    for (let i = 0; i < segment.length; i++) {
+        const char = segment[i];
+        const prev = i > 0 ? segment[i - 1] : '';
+
+        if (char === '"' && prev !== '\\') {
+            current += char;
+            if (inString) {
+                result += current;
+                current = '';
+            } else {
+                result += normalizeOutsideString(current);
+                current = '';
+            }
+            inString = !inString;
+            continue;
+        }
+
+        current += char;
+    }
+
+    if (current.length > 0) {
+        result += inString ? current : normalizeOutsideString(current);
+    }
+
+    return result.trim();
 }
 
 function splitListItems(code: string): { prefix: string; items: string[]; suffix: string; hasTrailingComma: boolean } | null {

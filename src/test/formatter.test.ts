@@ -1,6 +1,30 @@
 import * as assert from 'assert';
 import { formatText } from '../formatter';
 
+function stripFormattingWhitespace(text: string): string {
+    let result = '';
+    let inString = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const prev = i > 0 ? text[i - 1] : '';
+
+        if (char === '"' && prev !== '\\') {
+            inString = !inString;
+            result += char;
+            continue;
+        }
+
+        if (!inString && /\s/.test(char)) {
+            continue;
+        }
+
+        result += char;
+    }
+
+    return result;
+}
+
 describe('Formatter', () => {
     it('should indent nested blocks and let/in constructs', () => {
         const input = `let
@@ -138,5 +162,21 @@ in
         const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
 
         assert.ok(result.includes('        cwd / "src" / "main.c",\n        cwd / "src" / "main.c",\n        cwd / "src" / "main.c",'), 'a long inline list should be broken into separate entries');
+    });
+
+    it('should preserve string literals while formatting whitespace', () => {
+        const input = `rule_link = pb.rule (
+    |   {input, output, ...}|
+    {
+        command = ["gcc", "-o", output, input];
+        depfile = "\${output}.d";
+    }
+);`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.strictEqual(stripFormattingWhitespace(result), stripFormattingWhitespace(input));
+        assert.ok(result.includes('"gcc"'), 'string literals should remain intact');
+        assert.ok(result.includes('"-o"'), 'string literals should remain intact');
+        assert.ok(result.includes('"${output}.d"'), 'interpolated string literals should remain intact');
     });
 });
