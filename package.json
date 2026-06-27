@@ -1,25 +1,68 @@
 {
   "name": "lead-build",
-  "displayName": "lead-build",
-  "description": "lead-build integration",
+  "displayName": "Lead-build language",
+  "description": "Lead declarative build environment language support",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.125.0"
+    "vscode": "^1.121.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:pbb"
+  ],
+  "main": "./dist/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "pbb",
-      "aliases": ["Lead build file", "pbb"],
-      "extensions": [".pbb"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "pbb",
-      "scopeName": "source.lead-build",
-      "path": "./syntaxes/pbb.tmLanguage.json"
-    }]
+    "commands": [
+      {
+        "command": "lead-build.helloWorld",
+        "title": "Hello World"
+      }
+    ],
+    "languages": [
+      {
+        "id": "pbb",
+        "aliases": [
+          "Lead build file",
+          "pbb"
+        ],
+        "extensions": [
+          ".pbb"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pbb",
+        "scopeName": "source.lead-build",
+        "path": "./syntaxes/pbb.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.0",
+    "@types/vscode": "^1.121.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.3",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "webpack": "^5.105.3",
+    "webpack-cli": "^6.0.1"
   }
 }

@@ -1,32 +1,95 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Lead build file",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.pbb",
-				"match": "\\b(let|bind|in|true|false)\\b"
-			}]
-		},
-		"strings": {
-			"name": "string.quoted.double.pbb",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.pbb",
-					"match": "\\\\."
-				}
-			]
-		}
-	},
-	"scopeName": "source.lead-build"
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Lead build file",
+    "scopeName": "source.lead-build",
+    "patterns": [
+        { "include": "#comments" },
+        { "include": "#strings" },
+        { "include": "#keywords" },
+        { "include": "#numbers" },
+        { "include": "#operators" },
+        { "include": "#brackets" },
+        { "include": "#pipes" }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.pbb",
+                    "match": "//.*$"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.pbb",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.pbb",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.pbb",
+                    "match": "\\b(?:let|bind|in|true|false)\\b"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.integer.pbb",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.pbb",
+                    "match": "->|==|!=|<=|>=|\\|\\||&&|\\+\\+|//|[=+\\-*/?<>]"
+                }
+            ]
+        },
+        "brackets": {
+            "patterns": [
+                {
+                    "name": "punctuation.section.braces.begin.pbb",
+                    "match": "\\{"
+                },
+                {
+                    "name": "punctuation.section.braces.end.pbb",
+                    "match": "\\}"
+                },
+                {
+                    "name": "punctuation.section.brackets.begin.pbb",
+                    "match": "\\["
+                },
+                {
+                    "name": "punctuation.section.brackets.end.pbb",
+                    "match": "\\]"
+                },
+                {
+                    "name": "punctuation.section.parenthesis.begin.pbb",
+                    "match": "\\("
+                },
+                {
+                    "name": "punctuation.section.parenthesis.end.pbb",
+                    "match": "\\)"
+                }
+            ]
+        },
+        "pipes": {
+            "patterns": [
+                {
+                    "name": "punctuation.separator.pipe.pbb",
+                    "match": "\\|"
+                }
+            ]
+        }
+    }
 }
