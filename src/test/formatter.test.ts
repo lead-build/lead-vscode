@@ -74,4 +74,69 @@ in
         const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
         assert.strictEqual(result, expected);
     });
+
+    it('should insert line breaks after let-block statements', () => {
+        const input = `let
+objdir = cwd / "obj"; lib = include (cwd / "lib.pbb");
+in
+{
+path = cwd / "src"; }`;
+        const expected = `let
+    objdir = cwd / "obj";
+    lib = include (cwd / "lib.pbb");
+in
+{
+    path = cwd / "src";
+}`;
+
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+        assert.strictEqual(result, expected);
+    });
+
+    it('should wrap long lines while preserving parenthesized indentation', () => {
+        const input = `let
+    longExpr = include (cwd / "lib.pbb" / "path" / "to" / "deep" / "resource" / "file.pbb");
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('longExpr = include (cwd / "lib.pbb" / "path" / "to" / "deep" / "resource" /'), 'first wrapped segment should include the opening parenthesized expression');
+        assert.ok(result.includes('        "file.pbb");'), 'continuation should be indented and include the closing parenthesis');
+        assert.ok(result.includes('    path = cwd / "src";'), 'the remainder of the let/in block should still be formatted correctly');
+    });
+
+    it('should split long list literals so each element gets its own line', () => {
+        const input = `let
+    sources = [cwd / "src" / "main.c", cwd / "src" / "main2.c", cwd / "src" / "main3.c"];
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('    sources = ['), 'opening list bracket should be preserved');
+        assert.ok(result.includes('        cwd / "src" / "main.c",'), 'first list element should be on its own line');
+        assert.ok(result.includes('        cwd / "src" / "main2.c",'), 'second list element should be on its own line');
+        assert.ok(result.includes('        cwd / "src" / "main3.c"'), 'third list element should be on its own line');
+        assert.ok(result.includes('    ];'), 'list closing bracket should remain aligned');
+    });
+
+    it('should split long inline list entries onto separate lines', () => {
+        const input = `let
+    sources = [
+        cwd / "src" / "main.c",
+        cwd / "src" / "main.c", cwd / "src" / "main.c", cwd / "src" / "main.c", cwd / "src" / "main.c",
+        cwd / "src" / "main.c",
+        cwd / "src" / "main.c"
+    ];
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('        cwd / "src" / "main.c",\n        cwd / "src" / "main.c",\n        cwd / "src" / "main.c",'), 'a long inline list should be broken into separate entries');
+    });
 });
