@@ -113,7 +113,7 @@ function normalizeSpaces(segment: string): string {
     return text.trim();
 }
 
-function splitListItems(code: string): { prefix: string; items: string[]; suffix: string } | null {
+function splitListItems(code: string): { prefix: string; items: string[]; suffix: string; hasTrailingComma: boolean } | null {
     const trimmed = code.trim();
     if (!trimmed.includes('[') || !trimmed.includes(']')) {
         return null;
@@ -156,8 +156,9 @@ function splitListItems(code: string): { prefix: string; items: string[]; suffix
     const prefix = trimmed.slice(0, start).trimEnd();
     const inner = trimmed.slice(start + 1, end).trim();
     const suffix = trimmed.slice(end + 1).trim();
+    const hasTrailingComma = /,\s*$/.test(inner);
     if (!inner) {
-        return { prefix, items: [], suffix };
+        return { prefix, items: [], suffix, hasTrailingComma: false };
     }
 
     const items = inner
@@ -177,7 +178,7 @@ function splitListItems(code: string): { prefix: string; items: string[]; suffix
         return null;
     }
 
-    return { prefix, items, suffix };
+    return { prefix, items, suffix, hasTrailingComma };
 }
 
 function splitTopLevelItems(code: string): string[] | null {
@@ -225,29 +226,6 @@ function splitTopLevelItems(code: string): string[] | null {
     }
 
     return items.length > 1 ? items : null;
-}
-
-function countBracketDelta(code: string): number {
-    let depth = 0;
-    let inString = false;
-
-    for (let i = 0; i < code.length; i++) {
-        const char = code[i];
-        if (char === '"' && code[i - 1] !== '\\') {
-            inString = !inString;
-        }
-        if (inString) {
-            continue;
-        }
-
-        if (char === '[') {
-            depth += 1;
-        } else if (char === ']') {
-            depth = Math.max(depth - 1, 0);
-        }
-    }
-
-    return depth;
 }
 
 type WrappedSegment = { code: string; extraIndent: number };
@@ -319,10 +297,33 @@ function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
 
     const topLevelItems = splitTopLevelItems(trimmed);
     if (topLevelItems && topLevelItems.length > 1 && trimmed.length > MAX_LINE_LENGTH) {
+        const hasTrailingComma = /,\s*$/.test(trimmed);
         return topLevelItems.map((item, index) => ({
-            code: index < topLevelItems.length - 1 ? `${item},` : item,
+            code: index < topLevelItems.length - 1 || hasTrailingComma ? `${item},` : item,
             extraIndent: 1
         }));
+    }
+
+    // Heuristic: if a list opens on this line but doesn't close here, and the
+    // first line is long, split the visible first-line elements onto separate
+    // lines. This handles cases where the `[` is followed by many items and
+    // the closing `]` appears on later lines.
+    if (trimmed.includes('[') && !trimmed.includes(']') && trimmed.length > MAX_LINE_LENGTH) {
+        const openIdx = trimmed.indexOf('[');
+        const afterOpen = trimmed.slice(openIdx + 1).trim();
+        const hasTrailingComma = /,\s*$/.test(afterOpen);
+        const firstLineItems = afterOpen.split(',').map(s => s.trim()).filter(Boolean);
+        if (firstLineItems.length > 1) {
+            const opening = trimmed.slice(0, openIdx + 1).trim();
+            const segments2: WrappedSegment[] = [];
+            segments2.push({ code: opening, extraIndent: 0 });
+            for (let i = 0; i < firstLineItems.length; i++) {
+                const item = firstLineItems[i];
+                const shouldAppendComma = i < firstLineItems.length - 1 || hasTrailingComma;
+                segments2.push({ code: shouldAppendComma ? `${item},` : item, extraIndent: 1 });
+            }
+            return segments2;
+        }
     }
 
     const listItems = splitListItems(trimmed);
@@ -331,7 +332,7 @@ function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
         segments.push({ code: opening, extraIndent: 0 });
         for (let i = 0; i < listItems.items.length; i++) {
             const item = listItems.items[i];
-            const itemText = i < listItems.items.length - 1 ? `${item},` : item;
+            const itemText = i < listItems.items.length - 1 || listItems.hasTrailingComma ? `${item},` : item;
             segments.push({ code: itemText, extraIndent: 1 });
         }
         const closing = listItems.suffix ? `]${listItems.suffix}` : ']';
@@ -341,13 +342,15 @@ function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
 
     const parenthesizedList = trimmed.match(/^([A-Za-z0-9_\.\-]+\s*=\s*)?\[(.*)\](.*)$/);
     if (parenthesizedList) {
-        const inner = parenthesizedList[2].split(',').map((item) => item.trim()).filter(Boolean);
+        const rawInner = parenthesizedList[2];
+        const hasTrailingComma = /,\s*$/.test(rawInner.trim());
+        const inner = rawInner.split(',').map((item) => item.trim()).filter(Boolean);
         if (inner.length > 1) {
             const prefix = parenthesizedList[1] ?? '';
             segments.push({ code: `${prefix}[`, extraIndent: 0 });
             for (let i = 0; i < inner.length; i++) {
                 const item = inner[i];
-                const itemText = i < inner.length - 1 ? `${item},` : item;
+                const itemText = i < inner.length - 1 || hasTrailingComma ? `${item},` : item;
                 segments.push({ code: itemText, extraIndent: 1 });
             }
             const suffix = parenthesizedList[3] ?? '';
@@ -381,6 +384,30 @@ function isClosingLine(trimmed: string): boolean {
 
 function isOpeningLine(trimmed: string): boolean {
     return /^let(\s|$)/.test(trimmed) || /^bind(\s|$)/.test(trimmed);
+}
+
+function stripFormattingWhitespace(text: string): string {
+    let result = '';
+    let inString = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const prev = i > 0 ? text[i - 1] : '';
+
+        if (char === '"' && prev !== '\\') {
+            inString = !inString;
+            result += char;
+            continue;
+        }
+
+        if (!inString && /\s/.test(char)) {
+            continue;
+        }
+
+        result += char;
+    }
+
+    return result;
 }
 
 export function formatText(text: string, openers: Set<string>, closers: Set<string>): string {
@@ -446,11 +473,13 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
         const topLevelItems = splitTopLevelItems(formattedCode);
 
         if (topLevelItems && topLevelItems.length > 1 && formattedCode.length > MAX_LINE_LENGTH) {
+            const hasTrailingComma = /,\s*$/.test(formattedCode);
             const itemIndentWidth = /\[/.test(formattedCode) ? lineIndentWidth + indentSize : lineIndentWidth;
             for (let i = 0; i < topLevelItems.length; i++) {
                 const item = topLevelItems[i];
                 const itemComment = comment && i === topLevelItems.length - 1 ? ` ${comment}` : '';
-                formatted.push(' '.repeat(itemIndentWidth) + (i < topLevelItems.length - 1 ? `${item},` : item) + itemComment);
+                const itemText = i < topLevelItems.length - 1 || hasTrailingComma ? `${item},` : item;
+                formatted.push(' '.repeat(itemIndentWidth) + itemText + itemComment);
             }
         } else {
             for (let i = 0; i < wrappedLines.length; i++) {
@@ -472,5 +501,11 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
         level = Math.max(level + net, 0);
     }
 
-    return formatted.join('\n');
+    const result = formatted.join('\n');
+    // Safety net: formatter must not change non-whitespace tokens.
+    if (stripFormattingWhitespace(text) !== stripFormattingWhitespace(result)) {
+        return text;
+    }
+
+    return result;
 }
