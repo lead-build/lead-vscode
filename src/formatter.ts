@@ -5,6 +5,8 @@ interface LanguageConfig {
     brackets?: [string, string][];
 }
 
+// Load the bracket pairs from the extension's language configuration so the
+// formatter can keep indentation aligned with the language rules.
 export function loadBracketSets(extensionPath: string) {
     const configPath = path.join(extensionPath, "language-configuration.json");
     const config = JSON.parse(
@@ -22,10 +24,12 @@ export function loadBracketSets(extensionPath: string) {
     return { openers, closers };
 }
 
+// Escape a string so it can be used safely inside a regular expression.
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Count how many times the tracked bracket or keyword tokens appear in a line.
 function countTokens(line: string, tokens: Set<string>): number {
     let count = 0;
     for (const token of tokens) {
@@ -40,6 +44,7 @@ function countTokens(line: string, tokens: Set<string>): number {
     return count;
 }
 
+// Split off a trailing line comment while leaving string literals intact.
 function splitLineContent(line: string): { code: string; comment: string } {
     let inString = false;
     for (let i = 0; i < line.length - 1; i++) {
@@ -60,6 +65,8 @@ function splitLineContent(line: string): { code: string; comment: string } {
     return { code: line, comment: '' };
 }
 
+// Break a statement into semicolon-terminated pieces so each statement can be
+// formatted independently.
 function splitCodeOnSemicolons(code: string): string[] {
     const parts: string[] = [];
     let current = '';
@@ -88,6 +95,7 @@ function splitCodeOnSemicolons(code: string): string[] {
     return parts;
 }
 
+// Normalize spacing outside string literals without touching the string text.
 function normalizeOutsideString(segment: string): string {
     let text = segment.replace(/\s+/g, ' ');
     text = text.replace(/\s*\.\s*/g, '.');
@@ -113,6 +121,7 @@ function normalizeOutsideString(segment: string): string {
     return text;
 }
 
+// Normalize spacing for a full expression while preserving string literals.
 function normalizeSpaces(segment: string): string {
     let result = '';
     let current = '';
@@ -145,6 +154,8 @@ function normalizeSpaces(segment: string): string {
     return result.trim();
 }
 
+// Detect bracketed list literals and return their prefix, items, and suffix so
+// they can be reflowed one item per line when needed.
 function splitListItems(code: string): { prefix: string; items: string[]; suffix: string; hasTrailingComma: boolean } | null {
     const trimmed = code.trim();
     if (!trimmed.includes('[') || !trimmed.includes(']')) {
@@ -213,6 +224,7 @@ function splitListItems(code: string): { prefix: string; items: string[]; suffix
     return { prefix, items, suffix, hasTrailingComma };
 }
 
+// Split top-level comma-separated items while ignoring nested expressions.
 function splitTopLevelItems(code: string): string[] | null {
     const trimmed = code.trim();
     if (!trimmed.includes(',')) {
@@ -263,6 +275,8 @@ function splitTopLevelItems(code: string): string[] | null {
 type WrappedSegment = { code: string; extraIndent: number };
 const MAX_LINE_LENGTH = 80;
 
+// Find a safe wrap point near the line length limit, preferring commas and
+// lower-nesting positions.
 function findWrapPoint(text: string): { pos: number; depth: number } {
     const candidates: { pos: number; depth: number; score: number }[] = [];
     let depth = 0;
@@ -323,6 +337,8 @@ function findWrapPoint(text: string): { pos: number; depth: number } {
     return { pos: best.pos, depth: best.depth };
 }
 
+// Wrap a long line into multiple segments while preserving nesting-aware
+// indentation.
 function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
     const segments: WrappedSegment[] = [];
     const trimmed = code.trim();
@@ -410,14 +426,17 @@ function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
     return segments;
 }
 
+// Closing lines reduce indentation before they are emitted.
 function isClosingLine(trimmed: string): boolean {
     return trimmed.startsWith('}') || trimmed.startsWith(']') || trimmed.startsWith(')') || /^in(\s|$)/.test(trimmed);
 }
 
+// Opening lines increase indentation after they are emitted.
 function isOpeningLine(trimmed: string): boolean {
     return /^let(\s|$)/.test(trimmed) || /^bind(\s|$)/.test(trimmed);
 }
 
+// Strip whitespace outside strings so the validator can compare tokens only.
 function stripFormattingWhitespace(text: string): string {
     let result = '';
     let inString = false;
@@ -442,11 +461,15 @@ function stripFormattingWhitespace(text: string): string {
     return result;
 }
 
+// Format the full document in two passes: first expand semicolon-separated
+// statements, then reflow each line while tracking indentation and brackets.
 export function formatText(text: string, openers: Set<string>, closers: Set<string>): string {
     const lines = text.split(/\r?\n/);
     const expandedLines: string[] = [];
     let letDepth = 0;
 
+    // First pass: keep line structure, but split chained statements so each
+    // statement can be indented separately.
     for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.length === 0) {
@@ -484,6 +507,7 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
         }
     }
 
+    // Second pass: normalize spacing, wrap long lines, and track indentation.
     let level = 0;
     const indentSize = 4;
     const formatted: string[] = [];
@@ -504,6 +528,7 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
         const wrappedLines = wrapLongLine(formattedCode, indentLevel);
         const topLevelItems = splitTopLevelItems(formattedCode);
 
+        // Prefer list-aware formatting for long comma-separated item lists.
         if (topLevelItems && topLevelItems.length > 1 && formattedCode.length > MAX_LINE_LENGTH) {
             const hasTrailingComma = /,\s*$/.test(formattedCode);
             const itemIndentWidth = /\[/.test(formattedCode) ? lineIndentWidth + indentSize : lineIndentWidth;
@@ -522,6 +547,7 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
             }
         }
 
+        // Update the indentation level only after the current line has been emitted.
         const openCount = countTokens(formattedCode, openers);
         const closeCount = countTokens(formattedCode, closers);
         const net = openCount - closeCount;
@@ -533,8 +559,9 @@ export function formatText(text: string, openers: Set<string>, closers: Set<stri
         level = Math.max(level + net, 0);
     }
 
+    // Final safety check: the formatter must only change whitespace and line
+    // breaks, never non-whitespace tokens.
     const result = formatted.join('\n');
-    // Safety net: formatter must not change non-whitespace tokens.
     if (stripFormattingWhitespace(text) !== stripFormattingWhitespace(result)) {
         return text;
     }

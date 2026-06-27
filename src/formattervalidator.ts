@@ -23,5 +23,7 @@ function stripFormattingWhitespace(text: string): string {
 }
 
 export function validateFormattedText(originalText: string, formattedText: string): boolean {
+    // Keep this check in place so the formatter can never silently change
+    // non-whitespace tokens when it only intends to reflow layout.
     return stripFormattingWhitespace(originalText) === stripFormattingWhitespace(formattedText);
 }

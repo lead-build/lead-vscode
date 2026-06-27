@@ -16,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
 			const text = document.getText();
 			const formatted = formatText(text, openers, closers);
 
+			// Keep this guard so formatting stays limited to whitespace and line
+			// breaks; it prevents accidental token changes from reaching users.
 			if (!validateFormattedText(text, formatted)) {
 				vscode.window.showWarningMessage('Formatting aborted: non-whitespace changes detected.');
 				return [];
