@@ -376,6 +376,14 @@ function wrapLongLine(code: string, indentLevel: number): WrappedSegment[] {
 
     const listItems = splitListItems(trimmed);
     if (listItems) {
+        // Keep empty lists inline; they should never be expanded into a
+        // multi-line opening/closing pair.
+        if (listItems.items.length === 0) {
+            const inlineEmpty = listItems.prefix ? `${listItems.prefix} []` : '[]';
+            const normalizedEmpty = listItems.suffix ? `${inlineEmpty}${listItems.suffix}` : inlineEmpty;
+            return [{ code: normalizedEmpty, extraIndent: 0 }];
+        }
+
         const opening = listItems.prefix ? `${listItems.prefix} [` : '[';
         segments.push({ code: opening, extraIndent: 0 });
         for (let i = 0; i < listItems.items.length; i++) {

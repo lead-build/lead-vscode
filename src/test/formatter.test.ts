@@ -179,4 +179,31 @@ in
         assert.ok(result.includes('"-o"'), 'string literals should remain intact');
         assert.ok(result.includes('"${output}.d"'), 'interpolated string literals should remain intact');
     });
+
+    it('should keep empty lists inline', () => {
+        const input = `let
+    empty = [];
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('    empty = [];'), 'empty list should remain inline');
+        assert.ok(!result.includes('empty = [\n'), 'empty list should not be split into multiple lines');
+    });
+
+    it('should remove inner whitespace from empty lists while keeping them inline', () => {
+        const input = `let
+    empty = [    ];
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('    empty = [];'), 'empty list should be normalized to [] inline');
+        assert.ok(!result.includes('[    ]'), 'inner whitespace inside empty list should be removed');
+        assert.ok(!result.includes('empty = [\n'), 'empty list should not be split into multiple lines');
+    });
 });
