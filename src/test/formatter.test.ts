@@ -206,4 +206,30 @@ in
         assert.ok(!result.includes('[    ]'), 'inner whitespace inside empty list should be removed');
         assert.ok(!result.includes('empty = [\n'), 'empty list should not be split into multiple lines');
     });
+
+    it('should treat # as a line comment outside strings', () => {
+        const input = `let
+    value = cwd / "src"; # keep this exact comment ; // text
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('    value = cwd / "src"; # keep this exact comment ; // text'), '# comment should be preserved verbatim');
+        assert.strictEqual(stripFormattingWhitespace(result), stripFormattingWhitespace(input));
+    });
+
+    it('should not treat // as a comment delimiter', () => {
+        const input = `let
+    ratio = a // b;
+in
+{
+    path = cwd / "src";
+}`;
+        const result = formatText(input, new Set(['{', '[', '(', 'let']), new Set(['}', ']', ')', 'in']));
+
+        assert.ok(result.includes('    ratio = a // b;'), '// should remain part of code');
+        assert.strictEqual(stripFormattingWhitespace(result), stripFormattingWhitespace(input));
+    });
 });

@@ -44,18 +44,15 @@ function countTokens(line: string, tokens: Set<string>): number {
     return count;
 }
 
-// Split off a trailing line comment while leaving string literals intact.
+// Split off a trailing # line comment while leaving string literals intact.
 function splitLineContent(line: string): { code: string; comment: string } {
     let inString = false;
-    for (let i = 0; i < line.length - 1; i++) {
+    for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        if (char === '"') {
+        if (char === '"' && line[i - 1] !== '\\') {
             inString = !inString;
-            if (line[i - 1] === '\\') {
-                inString = !inString;
-            }
         }
-        if (!inString && char === '/' && line[i + 1] === '/') {
+        if (!inString && char === '#') {
             return {
                 code: line.slice(0, i).trimEnd(),
                 comment: line.slice(i)
