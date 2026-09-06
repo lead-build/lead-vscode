@@ -1,20 +1,24 @@
 import * as vscode from 'vscode';
 
-import { loadBracketSets, formatText } from "./formatter";
+import { formatText } from "./formatter";
 import { validateFormattedText } from "./formattervalidator";
 
 
 export function activate(context: vscode.ExtensionContext) {
 
-	const { openers, closers } =
-		loadBracketSets(context.extensionPath);
-
-
 	const provider: vscode.DocumentFormattingEditProvider = {
-		provideDocumentFormattingEdits(document) {
+		async provideDocumentFormattingEdits(document) {
 
 			const text = document.getText();
-			const formatted = formatText(text, openers, closers);
+
+			let formatted: string;
+			try {
+				formatted = await formatText(text);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				vscode.window.showErrorMessage(`Formatting failed: ${message}`);
+				return [];
+			}
 
 			// Keep this guard so formatting stays limited to whitespace and line
 			// breaks; it prevents accidental token changes from reaching users.
