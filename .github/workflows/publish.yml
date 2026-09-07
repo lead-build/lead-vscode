@@ -1,0 +1,27 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx @vscode/vsce package
+      - run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: '*.vsix'
