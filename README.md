@@ -17,9 +17,13 @@ Install the extension in VS Code, then open any `.pbb` file.
 Once installed, the extension provides:
 
 - Syntax highlighting for Lead build files
-- Formatting support through the built-in document formatter
+- Live syntax-error diagnostics, semantic highlighting, outline/breadcrumbs,
+  code folding, and document formatting, all via `pbls` (the `lead-build`
+  language server)
 
-To use the formatter, open a `.pbb` file and run the format document command in VS Code.
+These editor features require `pbls` to be installed and available on `PATH`
+(or pointed at via the `pblang.serverPath` setting). To use the formatter,
+open a `.pbb` file and run the format document command in VS Code.
 
 ## Notes on this tool and AI
 
