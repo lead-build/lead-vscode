@@ -5,9 +5,14 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: marketplace-publish
     steps:
       - uses: actions/checkout@v4
 
