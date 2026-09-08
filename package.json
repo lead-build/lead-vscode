@@ -22,6 +22,10 @@
       {
         "command": "lead-build.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "lead-build.restartLanguageServer",
+        "title": "Lead-build: Restart Language Server"
       }
     ],
     "languages": [
