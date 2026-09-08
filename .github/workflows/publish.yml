@@ -18,19 +18,19 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
       - run: npx @vscode/vsce package
 
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
-      - run: npx @vscode/vsce publish --azure-credentials
+      - run: npx @vscode/vsce publish --azure-credential
 
       - uses: actions/upload-artifact@v4
         with:
